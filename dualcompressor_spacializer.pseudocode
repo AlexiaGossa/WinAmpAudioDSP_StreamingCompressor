@@ -1,0 +1,80 @@
+minlev0 = 0.1;
+minlev1 = 0.05;
+speed0 = 0.9999;
+speed1 = 0.9999;
+val0 = spl0;
+val1 = spl1;
+alpha = slider1*0.2;
+beta = 1.0 - alpha;
+
+vpeak = max ( abs(val0), abs(val1) );
+maxlev0 = max ( maxlev0 * speed0, vpeak );
+maxlev0 = if ( below(maxlev0,minlev0), minlev0, maxlev0 );
+gain = 1.0/maxlev0;
+val0 = val0 * gain;
+val1 = val1 * gain;
+
+ref0 = val0;
+ref1 = val1;
+mono = (val0 + val1)*0.5;
+
+//Bessel high pass at 500Hz with WinFilter
+//Shift previous samples
+x1 = x0;
+y1 = y0;
+//New output
+x0 = mono;
+y0 = 0.96558817724064683000 * x0;
+y0 = y0 - (0.96558817724064683000 * x1) + (0.93118411689353542000 * y1);
+
+mono = y0;
+val0 = mono;
+val1 = mono;
+
+idx00ms = (idx-   4-440)&65535;
+idx02ms = (idx- 190-440)&65535;
+idx10ms = (idx- 882-440)&65535;
+idx20ms = (idx-1764-440)&65535;
+idx30ms = (idx-2646-440)&65535;
+idx40ms = (idx-3536-440)&65535;
+idx088m = (idx-   8000)&65535;
+idx066m = (idx-   6000)&65535;
+idx077m = (idx-   7000)&65535;
+
+val00ms = megabuf(idx00ms+0);
+val02ms = megabuf(idx02ms+1);
+val10ms = megabuf(idx10ms+0);
+val20ms = megabuf(idx20ms+1);
+val30ms = megabuf(idx30ms+0);
+val40ms = megabuf(idx40ms+1);
+val066m = megabuf(idx066m+1);
+val088m = megabuf(idx088m+0);
+val077m = megabuf(idx077m+0);
+val078m = megabuf(idx077m+1);
+
+val0 = (val00ms*0.30) + (val20ms*0.20) + (val30ms*0.10) + (val066m*0.10);
+val1 = (val02ms*0.50) + (val10ms*0.10) + (val40ms*0.20) + (val088m*0.10);
+mono = mono + val078m;
+
+
+assign(megabuf(idx+0),(mono*0.2)-(val0*0.5)+(val1*0.2));
+assign(megabuf(idx+1),(mono*0.2)+(val1*0.5)-(val0*0.2));
+
+mono = (val0 - val1)*0.5;
+val0 = (ref0*alpha) + (mono*beta);
+val1 = (ref1*alpha) - (mono*beta);
+
+vpeak = max ( abs(val0), abs(val1) );
+maxlev1 = max ( maxlev1 * speed1, vpeak );
+maxlev1 = if ( below(maxlev1,minlev1), minlev1, maxlev1 );
+gain = 1.0/maxlev1;
+val0 = val0 * gain;
+val1 = val1 * gain;
+
+val0 = if ( below(slider2,0.5), (val0+val1)*0.5, val0 );
+val1 = if ( below(slider2,0.5), val0, val1 );
+spl0 = val0;
+spl1 = val1;
+
+idx = (idx+2)&65535;
+
